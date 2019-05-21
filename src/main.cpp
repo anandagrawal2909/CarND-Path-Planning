@@ -124,7 +124,7 @@ int main() {
                   continue;
                 }
 
-                // If there is a car, then check speec of car
+                // If there is a car, then check speed of car
                 double vx = sensor_fusion[i][3];
                 double vy = sensor_fusion[i][4];
                 double check_speed = sqrt(vx*vx + vy*vy);

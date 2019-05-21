@@ -1,11 +1,7 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
-<p align="center">
-<a href="https://www.youtube.com/watch?v=KKQ2XqPRWwo"><img src="./path_planning.gif" alt="Path Planning" width="70%" height="70%">
-</a>
-<br> Path Planning
-</p>
-   
+
+![LaneChange](https://github.com/anandagrawal2909/CarND-Path-Planning/blob/master/lane_change.gif)   
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).  
 
@@ -87,63 +83,85 @@ the path has processed since last time.
 ## Implementation
 
 The implementation includes
-* Addition of car_control.cpp
 * Modification of main.cpp
+*Let's see these file in detail now.
 
-Let's see these file in detail now.
-### `car_control.cpp` Implementation
-This file is responsible for handling `Vehicle` class two functions `check_safe_distance` and `predict_vehicle_future_s`.
-1. `Vehicle` class
-This class handles data coming from `sensor_fusion` and has variables named as `s`, `d`, `vx`, `vy`, `lane`, `speed`.
-Depending on the `d` value of car and lane width which is 4 meters, its lane is calculated.
+1. 'In Line #107 to Line#120'
+Below code identifies lane number for all cars from sensor fusion 
+
 ```cpp
-  if (d < 0) {
-    lane = -1;
-  }
-  else if ((0 <= d) & (d < 4))
-  {
-    lane = 0;
-  }
-  else if ((0 <= 4) & (d < 8))
-  {
-    lane = 1;
-  }
-  else if ((0 <= 8) & (d < 12))
-  {
-    lane = 2;
-  }
+            // Check cars from sensor fusion
+            bool is_car_ahead = false;
+            bool is_car_left = false;
+            bool is_car_right = false;
+            for ( int i = 0; i < sensor_fusion.size(); i++ ) {
+                float d = sensor_fusion[i][6]; 
+                int car_lane = -1;
+                if ( d > 0 && d < 4 ) {
+                  car_lane = 0;
+                } else if ( d > 4 && d < 8 ) {
+                  car_lane = 1;
+                } else if ( d > 8 && d < 12 ) {
+                  car_lane = 2;
+                }
 ```
 Also, the `speed` is calculated using `vx` and `vy` values.
 ```cpp
 speed = sqrt(vx * vx + vy * vy);
 ```
 
-2. `check_safe_distance` function
-This function accepts ego car's `s` value and detected vehicle's `s` value and returns
-    * `true`: if ego car is behind detected vehicle AND distance between them is more than the `safe_distance`
-    * `false`: otherwise
+2. `line 136 to 144` --> Check if car is in safe distance of 30meters
+'''cpp
+               //check if car is in safe distance of > 30meters   
+                if ( car_lane == lane ) {
+                  is_car_ahead |= check_car_s > car_s && check_car_s - car_s < 30;
+                } else if ( car_lane - lane == -1 ) {
+                  is_car_left |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
+                } else if ( car_lane - lane == 1 ) {
+                  is_car_right |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
+                }
+            }
 
-3. `predict_vehicle_future_s` function
-This predicts the detected vehicle's `s` value in future. This is helpful, when the ego car is about to change the lane but there's a fast moving vehicle in the same lane where ego car will be shifting.
-Using this function, the ego car will predict that, if it switches the lane to that particular lane where a fast moving car is approaching from back, it will abort lane switch. Instead, it will slow down its speed to avoid collition to the car in front of her.
-```cpp
-if (lane_change && left_lane_free) {
-    lane -= 1;
-    ref_vel -= 0.224 * 1.5;
-}
-```
+'''
 
-### `main.cpp` Implementations
-In this file, we've taken <b>4</b> states for our path planning's state machine.
-1. `too_close`: this checks if the car detected via sensor_fusion is too close (< 30m close)
-2. `left_lane_free`, `right_lane_free`: if above condition holds true, it will check whether the left or right lane is free and will set the value accordingly
-3. `prepare_lane_change`: based on above both conditions true, will prepare to lane change
-4. `lane_change`: when done preparing lane change, lane will be changed
+3. `Turn car based on state` 
+'''cpp
+            if ( is_car_ahead ) { 
+	      //turn_left
+              if ( !is_car_left && lane > 0 ) {
+                lane--; 
+              } 
+	      //turn_Right
+	      else if ( !is_car_right && lane != 2 ){
+                // if there is no car right and there is a right lane.
+                lane++; 
+              } 
+	      //Reduce speeed
+	      else {
+                speed_diff -= MAX_ACC;
+              }
+            } 
+	    
+	    // if we are not on the center lane then come back to center
+	    else {
+              if ( lane != 1 ) { 
+                if ( ( lane == 0 && !is_car_right ) || ( lane == 2 && !is_car_left ) ) {
+                  lane = 1; 
+                }
+              }
 
-For speed control, we're creating 3 waypoints 30m aparts from each other. Using `spline`, we're traversing through these points to create our total `50` waypoints for car to move forward.
-```cpp
+	      //increase speed.
+              if ( ref_vel < MAX_SPEED ) {
+                speed_diff += MAX_ACC;
+              }
+            }
+'''
+
+4.  `For speed control'
+ *we're creating 3 waypoints 30m aparts from each other. 
+ Using `spline`, we're traversing through these points to create our total `50` waypoints for car to move forward.
+``cpp
 vector<double> next_wp0 = getXY(car_s + 30, (lane_width * lane + lane_width / 2), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 vector<double> next_wp1 = getXY(car_s + 60, (lane_width * lane + lane_width / 2), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 vector<double> next_wp2 = getXY(car_s + 90, (lane_width * lane + lane_width / 2), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 ```
-
