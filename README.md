@@ -160,8 +160,9 @@ speed = sqrt(vx * vx + vy * vy);
 4.  `For speed control'
  *we're creating 3 waypoints 30m aparts from each other. 
  Using `spline`, we're traversing through these points to create our total `50` waypoints for car to move forward.
+
 '''cpp
 vector<double> next_wp0 = getXY(car_s + 30, (lane_width * lane + lane_width / 2), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 vector<double> next_wp1 = getXY(car_s + 60, (lane_width * lane + lane_width / 2), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 vector<double> next_wp2 = getXY(car_s + 90, (lane_width * lane + lane_width / 2), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-```
+'''
